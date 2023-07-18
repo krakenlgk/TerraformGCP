@@ -1,6 +1,7 @@
 # Bucket to store website
 
 resource "google_storage_bucket" "website" {
+  provider = google
   name = "example-website-bucket-by-gk"
   location = "ASIA-SOUTH1"
 }
@@ -26,6 +27,7 @@ resource "google_storage_bucket_object" "static_site_src" {
 # reserve a static external IP address
 
 resource "google_compute_global_address" "website_ip" {
+  provider = google
   name = "website-lb-ip"
 }
 
@@ -33,22 +35,24 @@ resource "google_compute_global_address" "website_ip" {
 
 resource "google_dns_managed_zone" "dns_zone" {
   provider = google
-  name = "terraform-gcp-cloud"
-  dns_name = "terraform-gcp-cloud.com."
+  name = "terraform-gcp"
+  dns_name = "test.karthikeyan.cloud."
 }
 
 # add the IP to the DNS
 
 resource "google_dns_record_set" "website" {
-  name = "website.${data.google_dns_managed_zone.dns_zone.dns_name}"
+  provider = google
+  name = google_dns_managed_zone.dns_zone.dns_name
   type = "A"
   ttl = 300
-  managed_zone = data.google_dns_managed_zone.dns_zone.name
+  managed_zone = google_dns_managed_zone.dns_zone.name
   rrdatas = [google_compute_global_address.website_ip.address]
 }
 
 # add the bucket as a CDN backend
 resource "google_compute_backend_bucket" "website-backend" {
+  provider = google
   name = "website-bucket"
   bucket_name = google_storage_bucket.website.name
   description = "Contains files needed for the website"
@@ -57,6 +61,7 @@ resource "google_compute_backend_bucket" "website-backend" {
 
 # GCP URL MAP
 resource "google_compute_url_map" "website" {
+  provider = google
   name = "website-url-map"
   default_service = google_compute_backend_bucket.website-backend.self_link
   host_rule {
@@ -74,6 +79,7 @@ resource "google_compute_url_map" "website" {
 # GCP HTTP Proxy
 
 resource "google_compute_target_http_proxy" "website" {
+  provider = google
   name = "website-target-proxy"
   url_map = google_compute_url_map.website.self_link
 }
@@ -81,6 +87,7 @@ resource "google_compute_target_http_proxy" "website" {
 # GCP forwarding rule
 
 resource "google_compute_global_forwarding_rule" "default" {
+  provider = google
   name = "website-forwarding-rule"
   load_balancing_scheme = "EXTERNAL"
   ip_address = google_compute_global_address.website_ip.address
